@@ -120,7 +120,11 @@ class Server:
         return self.online == 0
 
     def ssh(self):
-        os.system('gnome-terminal -- ssh {username}@{hostname}'.format(username=self.username, hostname=self.hostname))
+        # try to open a terminal depending on which terminal emulators exist on the system
+        if os.system('which gnome-terminal') == 0:
+            os.system(f'gnome-terminal -- ssh {self.username}@{self.hostname}')
+        elif os.system('which konsole') == 0:
+            os.system(f'konsole -e "ssh {self.username}@{self.hostname}"')
 
 
 win = SSHMonWindow()
