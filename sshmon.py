@@ -19,7 +19,7 @@ class SSHMonWindow(Gtk.Window):
         self.save_path = os.path.join(save_dir, 'servers.json')
         self.load()
 
-        self.list = Gtk.ListBox()
+        self.list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7)
         self.add(self.list)
 
         self.render()
@@ -92,13 +92,13 @@ class SSHMonWindow(Gtk.Window):
         self.render()
 
     def new_list_child(self, child):
-        row = Gtk.ListBoxRow()
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         row.add(child)
         self.list.add(row)
         return child
 
     def new_box_row(self):
-        return self.new_list_child(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, expand=True))
+        return self.new_list_child(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, expand=True, spacing=7))
 
     def show_ssh(self, widget, server):
         if server.ping():
