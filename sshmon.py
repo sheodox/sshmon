@@ -26,7 +26,7 @@ class SSHMonWindow(Gtk.Window):
         self.render()
 
     def save(self):
-        info = list({'un': s.username, 'hn': s.hostname} for s in self.servers)
+        info = list({'nn': s.nickname, 'un': s.username, 'hn': s.hostname} for s in self.servers)
         file = open(self.save_path, 'w')
         json.dump(info, file)
         file.close()
@@ -41,7 +41,7 @@ class SSHMonWindow(Gtk.Window):
             server_info = []
 
         for info in server_info:
-            self.servers.append(Server(info['un'], info['hn']))
+            self.servers.append(Server(info['nn'], info['un'], info['hn']))
 
     def render(self):
         for child in self.list.get_children():
@@ -51,7 +51,7 @@ class SSHMonWindow(Gtk.Window):
         for index, server in enumerate(self.servers):
             box = self.new_box_row()
             active = "online" if server.ping() else "offline"
-            ssh_button = Gtk.Button(label='{hn} - {active}'.format(hn=server.hostname, active=active), expand=True)
+            ssh_button = Gtk.Button(label='{nn} ({hn}) - {active}'.format(nn=server.nickname, hn=server.hostname, active=active), expand=True)
             delete_button = Gtk.Button(label='Delete')
 
             box.add(ssh_button)
@@ -65,6 +65,8 @@ class SSHMonWindow(Gtk.Window):
         # new server entry
         new_server_box = self.new_box_row()
 
+        nickname_entry = Gtk.Entry()
+        nickname_entry.set_placeholder_text('nickname')
         username_entry = Gtk.Entry()
         username_entry.set_placeholder_text('username')
         separator = Gtk.Label(label='@')
@@ -72,18 +74,20 @@ class SSHMonWindow(Gtk.Window):
         hostname_entry.set_placeholder_text('hostname')
         add = Gtk.Button(label="Add")
 
-        username_entry.connect('activate', self.add_server, username_entry, hostname_entry)
-        hostname_entry.connect('activate', self.add_server, username_entry, hostname_entry)
+        nickname_entry.connect('activate', self.add_server, nickname_entry, username_entry, hostname_entry)
+        username_entry.connect('activate', self.add_server, nickname_entry, username_entry, hostname_entry)
+        hostname_entry.connect('activate', self.add_server, nickname_entry, username_entry, hostname_entry)
         add.connect('clicked', self.add_server, username_entry, hostname_entry)
 
+        new_server_box.add(nickname_entry)
         new_server_box.add(username_entry)
         new_server_box.add(separator)
         new_server_box.add(hostname_entry)
         new_server_box.add(add)
         self.show_all()
 
-    def add_server(self, widget, un_entry, hn_entry):
-        self.servers.append(Server(un_entry.get_text(), hn_entry.get_text()))
+    def add_server(self, widget, nn_entry, un_entry, hn_entry):
+        self.servers.append(Server(nn_entry.get_text(), un_entry.get_text(), hn_entry.get_text()))
         self.save()
         self.render()
 
@@ -105,14 +109,14 @@ class SSHMonWindow(Gtk.Window):
         if server.ping():
             server.ssh()
         else:
-            dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK, 'Cannot connect to {}'.format(server.hostname))
+            dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK, f'Cannot connect to {server.hostname}')
             dialog.run()
             dialog.destroy()
 
 
 class Server:
-
-    def __init__(self, username, hostname):
+    def __init__(self, nickname, username, hostname):
+        self.nickname = nickname
         self.username = username
         self.hostname = hostname
         self.online = os.system('ping -c 1 ' + self.hostname)
@@ -123,6 +127,7 @@ class Server:
     def ssh(self):
         def ssh(cmd):
             Popen(cmd, shell=True)
+
         # try to open a terminal depending on which terminal emulators exist on the system
         if os.system('which gnome-terminal') == 0:
             ssh(f'gnome-terminal -- ssh {self.username}@{self.hostname}')
