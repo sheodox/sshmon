@@ -56,7 +56,7 @@ class SSHMonWindow(Gtk.Window):
 
     def create_server_row(self, server):
         def set_button_text(active):
-            return ssh_button.set_label(f'{server.nickname} {active} - ({server.hostname})')
+            return ssh_button.set_label(f'{server.nickname} - {active} - ({server.hostname})')
 
         box = self.new_box_row()
         ssh_button = Gtk.Button(
@@ -140,7 +140,6 @@ class Server:
 
         thread = threading.Thread(target=in_thread)
         thread.start()
-
 
     def status(self):
         if self.online is None:
