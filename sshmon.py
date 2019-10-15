@@ -1,3 +1,4 @@
+import threading
 import gi
 import os
 from subprocess import Popen
@@ -5,7 +6,7 @@ import json
 from pathlib import Path
 
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
 
 
 class SSHMonWindow(Gtk.Window):
@@ -47,19 +48,28 @@ class SSHMonWindow(Gtk.Window):
         for child in self.list.get_children():
             self.list.remove(child)
 
-        # rows for each row
-        for index, server in enumerate(self.servers):
-            box = self.new_box_row()
-            active = "online" if server.ping() else "offline"
-            ssh_button = Gtk.Button(label='{nn} ({hn}) - {active}'.format(nn=server.nickname, hn=server.hostname, active=active), expand=True)
-            delete_button = Gtk.Button(label='Delete')
+        # rows for each server
+        for server in self.servers:
+            self.create_server_row(server)
 
-            box.add(ssh_button)
-            box.add(delete_button)
-
-            ssh_button.connect("clicked", self.show_ssh, server)
-            delete_button.connect("clicked", self.remove_server, server)
         self.render_add_row()
+
+    def create_server_row(self, server):
+        def set_button_text(active):
+            return ssh_button.set_label(f'{server.nickname} {active} - ({server.hostname})')
+
+        box = self.new_box_row()
+        ssh_button = Gtk.Button(
+            label='', expand=True)
+        delete_button = Gtk.Button(label='Delete')
+        set_button_text('pinging...')
+
+        box.add(ssh_button)
+        box.add(delete_button)
+
+        ssh_button.connect("clicked", self.show_ssh, server)
+        delete_button.connect("clicked", self.remove_server, server)
+        server.ping(set_button_text)
 
     def render_add_row(self):
         # new server entry
@@ -106,7 +116,7 @@ class SSHMonWindow(Gtk.Window):
         return self.new_list_child(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, expand=True, spacing=7))
 
     def show_ssh(self, widget, server):
-        if server.ping():
+        if server.status() == 'online':
             server.ssh()
         else:
             dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK, f'Cannot connect to {server.hostname}')
@@ -119,10 +129,23 @@ class Server:
         self.nickname = nickname
         self.username = username
         self.hostname = hostname
-        self.online = os.system('ping -c 1 ' + self.hostname)
+        self.online = None
 
-    def ping(self):
-        return self.online == 0
+    def ping(self, callback):
+        def in_thread():
+            proc = Popen(['/usr/bin/ping', '-c', '1', self.hostname])
+            proc.wait()
+            self.online = proc.poll() == 0
+            GLib.idle_add(lambda: callback(self.status()))
+
+        thread = threading.Thread(target=in_thread)
+        thread.start()
+
+
+    def status(self):
+        if self.online is None:
+            return 'pinging...'
+        return 'online' if self.online else 'offline'
 
     def ssh(self):
         def ssh(cmd):
