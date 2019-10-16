@@ -1,0 +1,9 @@
+.online {
+    border-left: 5px solid #00ff00;
+}
+.pinging {
+    border-left: 5px solid gray;
+}
+.offline {
+    border-left: 5px solid red;
+}
