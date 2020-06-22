@@ -1,4 +1,5 @@
 import threading
+from operator import attrgetter
 import gi
 import os
 from subprocess import Popen
@@ -48,6 +49,7 @@ class SSHMonWindow(Gtk.Window):
         for child in self.list.get_children():
             self.list.remove(child)
 
+        self.servers.sort(key=attrgetter('nickname'))
         # rows for each server
         for server in self.servers:
             self.create_server_row(server)
