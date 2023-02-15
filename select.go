@@ -23,6 +23,7 @@ func (i item) FilterValue() string { return i.title }
 type model struct {
 	list           list.Model
 	selectedRemote RemoteConfig
+	shouldConnect  bool
 }
 
 func (m *model) Init() tea.Cmd {
@@ -39,6 +40,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			item, ok := m.list.SelectedItem().(item)
 			if ok {
 				m.selectedRemote = item.remote
+				m.shouldConnect = true
 				return m, tea.Quit
 			}
 		}
@@ -56,7 +58,7 @@ func (m *model) View() string {
 	return docStyle.Render(m.list.View())
 }
 
-func selectRemote(remotes []RemoteConfig) RemoteConfig {
+func selectRemote(remotes []RemoteConfig) (RemoteConfig, bool) {
 	items := []list.Item{}
 
 	for _, remote := range remotes {
@@ -77,5 +79,5 @@ func selectRemote(remotes []RemoteConfig) RemoteConfig {
 		os.Exit(1)
 	}
 
-	return m.selectedRemote
+	return m.selectedRemote, m.shouldConnect
 }

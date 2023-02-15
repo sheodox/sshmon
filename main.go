@@ -16,9 +16,11 @@ func main() {
 
 	remotes := loadConfig()
 
-	remote := selectRemote(remotes)
+	remote, shouldConnect := selectRemote(remotes)
 
-	ssh(remote)
+	if shouldConnect {
+		ssh(remote)
+	}
 }
 
 func ssh(remote RemoteConfig) {
