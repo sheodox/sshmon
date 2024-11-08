@@ -1,9 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -14,6 +14,11 @@ func main() {
 	// disable showing time with log failures
 	log.SetFlags(0)
 
+	if len(os.Args) > 1 && os.Args[1] == "edit" {
+		spawnEditor()
+		return
+	}
+
 	remotes := loadConfig()
 
 	remote, shouldConnect := selectRemote(remotes)
@@ -21,6 +26,28 @@ func main() {
 	if shouldConnect {
 		ssh(remote)
 	}
+}
+
+func spawnEditor() {
+	editor := os.Getenv("EDITOR")
+
+	if editor == "" {
+		log.Fatalf("EDITOR environment variable not defined\n")
+	}
+
+	fmt.Println("Opening config file in your $EDITOR")
+	fmt.Println("The config file is a JSON array of objects like: [{\"nn\": \"Server 1\", \"un\": \"root\", \"hn\": \"192.168.1.200\"}]")
+	fmt.Println("Where 'nn' = nickname, 'un' = username, 'hn' = host name")
+	fmt.Println("Press Enter to continue...")
+
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
+
+	cmd := exec.Command(editor, getConfigFilePath())
+
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Run()
 }
 
 func ssh(remote RemoteConfig) {
@@ -41,17 +68,21 @@ type RemoteConfig struct {
 	Hostname string `json:"hn"`
 }
 
-func loadConfig() []RemoteConfig {
+func getConfigFilePath() string {
 	configDir, err := os.UserConfigDir()
 
 	if err != nil {
 		log.Fatal("Error getting config dir", err)
 	}
 
-	config := make([]RemoteConfig, 0)
-	configFilePath := path.Join(configDir, "sheodox/sshmon/servers.json")
+	return path.Join(configDir, "sheodox/sshmon/servers.json")
+}
 
-	configBytes, err := ioutil.ReadFile(configFilePath)
+func loadConfig() []RemoteConfig {
+	config := make([]RemoteConfig, 0)
+	configFilePath := getConfigFilePath()
+
+	configBytes, err := os.ReadFile(configFilePath)
 
 	if err != nil {
 		log.Fatal("Error reading config file", err)
